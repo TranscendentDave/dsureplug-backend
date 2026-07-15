@@ -50,8 +50,9 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
+    // UPDATED: Using 'gemini-2.5-flash' since 'gemini-1.5-flash' is deprecated
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       systemInstruction: 'You are Pluggy, a friendly, street-smart AI Assistant for dSurePlug Nigeria. You must call search_businesses to find real shops for the user.',
       tools: [searchBusinessesTool] 
     });
@@ -94,7 +95,6 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (error) {
     console.error('Error during processing:', error);
-    // Send the actual error message back to the client for debugging!
     res.status(500).json({ 
       error: 'Something went wrong inside the backend.',
       message: error.message,
