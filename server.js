@@ -5,14 +5,24 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const app = express();
 app.use(express.json());
 
+// Log a warning on startup if variables are missing
+const missingVars = [];
+if (!process.env.SUPABASE_URL) missingVars.push('SUPABASE_URL');
+if (!process.env.SUPABASE_SERVICE_KEY) missingVars.push('SUPABASE_SERVICE_KEY');
+if (!process.env.GEMINI_API_KEY) missingVars.push('GEMINI_API_KEY');
+
+if (missingVars.length > 0) {
+  console.error(`CRITICAL CONFIG WARNING: Missing variables on Render: ${missingVars.join(', ')}`);
+}
+
 // 1. Connect to your Supabase Database
 const supabase = createClient(
-  process.env.SUPABASE_URL, 
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_URL || 'https://placeholder-url.supabase.co', 
+  process.env.SUPABASE_SERVICE_KEY || 'placeholder-key'
 );
 
 // 2. Connect to Google AI Studio (Gemini)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'placeholder-key');
 
 // 3. Define the Database Search Tool for Pluggy
 const searchBusinessesTool = {
@@ -40,7 +50,6 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    // Correct tool registration at the model configuration level
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
       systemInstruction: 'You are Pluggy, a friendly, street-smart AI Assistant for dSurePlug Nigeria. You must call search_businesses to find real shops for the user.',
@@ -50,17 +59,14 @@ app.post('/api/chat', async (req, res) => {
     const chat = model.startChat();
     const result = await chat.sendMessage(userMessage);
     
-    // Correctly call functionCalls as a method using parentheses
     const functionCalls = result.response.functionCalls();
 
-    // If Gemini decides it needs to search our database
     if (functionCalls && functionCalls.length > 0) {
       const call = functionCalls[0];
 
       if (call.name === 'search_businesses') {
         const { keywords, state, city } = call.args;
 
-        // Query Supabase: Matches keywords against business_name OR category
         let query = supabase
           .from('shops')
           .select('business_name, category, physical_address, city, state, is_verified')
@@ -73,7 +79,6 @@ app.post('/api/chat', async (req, res) => {
 
         if (error) throw error;
 
-        // Send the database results back to Gemini so Pluggy can format the response nicely
         const toolResponse = await chat.sendMessage([{
           functionResponse: {
             name: 'search_businesses',
@@ -85,12 +90,16 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    // Default conversational response if no search was needed
     res.json({ response: result.response.text() });
 
   } catch (error) {
     console.error('Error during processing:', error);
-    res.status(500).json({ error: 'Something went wrong inside the backend.' });
+    // Send the actual error message back to the client for debugging!
+    res.status(500).json({ 
+      error: 'Something went wrong inside the backend.',
+      message: error.message,
+      stack: error.stack
+    });
   }
 });
 
