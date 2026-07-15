@@ -22,7 +22,7 @@ const searchBusinessesTool = {
     parameters: {
       type: 'OBJECT',
       properties: {
-        keywords: { type: 'STRING', description: 'Product or service (e.g., bone straight, laptop).' },
+        keywords: { type: 'STRING', description: 'Product, service, or category (e.g., hair, electronics, laptop).' },
         state: { type: 'STRING', description: 'Nigerian state (e.g., Lagos, Abuja).' },
         city: { type: 'STRING', description: 'Local area or market (e.g., Ikeja, Wuse).' }
       },
@@ -40,18 +40,18 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
+    // Correct tool registration at the model configuration level
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
       systemInstruction: 'You are Pluggy, a friendly, street-smart AI Assistant for dSurePlug Nigeria. You must call search_businesses to find real shops for the user.',
+      tools: [searchBusinessesTool] 
     });
 
-    const chat = model.startChat({
-      tools: [searchBusinessesTool]
-    });
-
+    const chat = model.startChat();
     const result = await chat.sendMessage(userMessage);
-    const responseText = result.response.text();
-    const functionCalls = result.response.functionCalls;
+    
+    // Correctly call functionCalls as a method using parentheses
+    const functionCalls = result.response.functionCalls();
 
     // If Gemini decides it needs to search our database
     if (functionCalls && functionCalls.length > 0) {
@@ -60,11 +60,11 @@ app.post('/api/chat', async (req, res) => {
       if (call.name === 'search_businesses') {
         const { keywords, state, city } = call.args;
 
-        // Query our Supabase PostgreSQL database
+        // Query Supabase: Matches keywords against business_name OR category
         let query = supabase
           .from('shops')
           .select('business_name, category, physical_address, city, state, is_verified')
-          .ilike('business_name', `%${keywords}%`); // Searches names matching keywords
+          .or(`business_name.ilike.%${keywords}%,category.ilike.%${keywords}%`);
 
         if (state) query = query.eq('state', state);
         if (city) query = query.eq('city', city);
@@ -86,7 +86,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // Default conversational response if no search was needed
-    res.json({ response: responseText });
+    res.json({ response: result.response.text() });
 
   } catch (error) {
     console.error('Error during processing:', error);
