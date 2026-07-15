@@ -55,8 +55,9 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
+    // UPDATED: Using 'gemini-3.1-flash-lite' to bypass the 503 traffic spikes on standard flash
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.1-flash-lite',
       systemInstruction: 'You are Pluggy, a friendly, street-smart AI Assistant for dSurePlug Nigeria. You help users find verified plugs. Always call search_businesses when a user is looking for a plug or product. Our database categories are "Electronics" (for laptops, phones, gadgets) and "Fashion & Beauty" (for hair, wigs, clothes). Map user queries to these categories.',
       tools: [searchBusinessesTool] 
     });
