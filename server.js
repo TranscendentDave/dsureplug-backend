@@ -50,9 +50,9 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    // UPDATED: Using 'gemini-2.5-flash' since 'gemini-1.5-flash' is deprecated
+    // UPDATED: Using 'gemini-3.5-flash' for 2026 support
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       systemInstruction: 'You are Pluggy, a friendly, street-smart AI Assistant for dSurePlug Nigeria. You must call search_businesses to find real shops for the user.',
       tools: [searchBusinessesTool] 
     });
